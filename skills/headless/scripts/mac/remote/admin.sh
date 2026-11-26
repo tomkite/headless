@@ -3,6 +3,11 @@
 # admin.sh with sudo -S. Standard input holds the login's password (one
 # line) after a --headless-stdin-- line. settings.json sits beside this file.
 #
+# It installs Apple's Command Line Tools and Homebrew (owned by LOGIN) when
+# the homebrew extra is on, and, when automatic sign-in is on, turns
+# FileVault off (asking the user only when macOS refuses) and stores the
+# sign-in password macOS uses at start-up.
+#
 # usage: sudo -S bash admin.sh LOGIN
 set -euo pipefail
 die() { echo "headless: $*" >&2; exit 1; }
@@ -10,10 +15,11 @@ say() { echo "headless: $*"; }
 
 LOGIN="${1:?usage: admin.sh LOGIN}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-# Determinate Nix's installer for Apple silicon, pinned by version and hash.
-NIX_INSTALLER_URL=https://github.com/DeterminateSystems/nix-installer/releases/download/v3.24.1/nix-installer-aarch64-darwin
-NIX_INSTALLER_SHA256=34199f983d1a08e76a4fb33b28691faa637fc4a8677b4de20bd951126e1bdada
-NIX=/nix/var/nix/profiles/default/bin/nix
+# Homebrew's signed installer package for Apple silicon, pinned by version
+# and hash. Homebrew updates itself afterwards.
+BREW_PKG_URL=https://github.com/Homebrew/brew/releases/download/7.0.16/Homebrew.pkg
+BREW_PKG_SHA256=577808c0d0102681ff2aa196d4b27ce64d6a07e32b44cfbad2a2a490c85a4e37
+BREW=/opt/homebrew/bin/brew
 
 [ "$(id -u)" -eq 0 ] || die "run admin.sh as root"
 # sudo keeps the login's HOME; root works in its own, so nothing in the
@@ -22,6 +28,7 @@ export HOME=/var/root
 [[ "$LOGIN" =~ ^[a-z0-9_][a-z0-9_-]*$ ]] || die "LOGIN is not a plain account name"
 dscl . -read "/Users/$LOGIN" UniqueID > /dev/null 2>&1 || die "$LOGIN is not an account on this Mac"
 auto_login="$(plutil -extract autoLogin raw "$HERE/settings.json")"
+homebrew="$(plutil -extract extras.homebrew raw "$HERE/settings.json" 2> /dev/null || echo true)"
 
 # Skip to the mark line (the line sudo read, if it needed one, comes first).
 PASSWORD=""
@@ -79,20 +86,47 @@ turn_filevault_off() {
   say "FileVault is off (decryption took $((SECONDS - start)) seconds)"
 }
 
-if [ ! -x "$NIX" ]; then
-  say "installing Determinate Nix..."
-  installer="$(mktemp -t nix-installer)"
-  curl -fsSL --retry 3 -o "$installer" "$NIX_INSTALLER_URL"
-  echo "$NIX_INSTALLER_SHA256  $installer" | shasum -a 256 -c - > /dev/null || die "the Nix installer's hash does not match"
-  chmod 0755 "$installer"
-  "$installer" install --no-confirm
-  rm -f "$installer"
-fi
-say "$("$NIX" --version)"
+# Apple's Command Line Tools give Homebrew git and a compiler. This is how
+# Homebrew's own installer gets them without a dialog at the screen.
+install_clt() {
+  local flag=/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress label
+  say "installing Apple's Command Line Tools (several minutes)..."
+  touch "$flag"
+  label="$(softwareupdate -l 2> /dev/null | grep -B1 -E 'Command Line Tools' | awk -F'*' '/^ *\*/ { print $2 }' \
+    | sed -e 's/^ *Label: //' -e 's/^ *//' | sort -V | tail -n 1)"
+  [ -n "$label" ] || { rm -f "$flag"; die "Software Update offers no Command Line Tools; install them at the Mac with: xcode-select --install"; }
+  softwareupdate -i "$label" > /dev/null || { rm -f "$flag"; die "installing $label failed"; }
+  rm -f "$flag"
+  xcode-select --switch /Library/Developer/CommandLineTools
+}
 
-# This comes after the Nix install on purpose: right after FileVault
-# decrypts, macOS could not mount a newly made encrypted volume (the Nix
-# store's) until a restart.
+install_homebrew() {
+  local tmp pkg plist=/var/tmp/.homebrew_pkg_user.plist
+  say "installing Homebrew for $LOGIN..."
+  tmp="$(mktemp -d)"
+  pkg="$tmp/Homebrew.pkg"
+  curl -fsSL --retry 3 -o "$pkg" "$BREW_PKG_URL"
+  echo "$BREW_PKG_SHA256  $pkg" | shasum -a 256 -c - > /dev/null || { rm -rf "$tmp"; die "the Homebrew package's hash does not match"; }
+  # The package makes /opt/homebrew belong to the account this file names
+  # (root-only, no ACL), not to whoever is at the screen.
+  rm -f "$plist"
+  defaults write /var/tmp/.homebrew_pkg_user HOMEBREW_PKG_USER "$LOGIN"
+  chown root:wheel "$plist"
+  chmod 600 "$plist"
+  chmod -N "$plist" 2> /dev/null || true
+  installer -pkg "$pkg" -target / > /dev/null || { rm -rf "$tmp" "$plist"; die "the Homebrew package did not install"; }
+  rm -rf "$tmp" "$plist"
+}
+
+if [ "$homebrew" = true ]; then
+  xcode-select -p > /dev/null 2>&1 && [ -x "$(xcode-select -p)/usr/bin/git" ] || install_clt
+  say "Command Line Tools at $(xcode-select -p)"
+  [ -x "$BREW" ] || install_homebrew
+  owner="$(stat -f %Su /opt/homebrew)"
+  [ "$owner" = "$LOGIN" ] || die "/opt/homebrew belongs to $owner, not $LOGIN; run apply.sh as $owner, or hand it over at the Mac with: sudo chown -R $LOGIN /opt/homebrew"
+  say "$(sudo -u "$LOGIN" -H "$BREW" --version | head -n 1), owned by $LOGIN"
+fi
+
 if [ "$auto_login" = true ] && [ "$(fdesetup isactive 2> /dev/null || true)" = true ]; then
   turn_filevault_off
 fi

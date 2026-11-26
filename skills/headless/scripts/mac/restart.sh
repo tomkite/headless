@@ -16,6 +16,9 @@ read_password
 boot() { on 'sysctl -n kern.boottime' 2> /dev/null | sed -n 's/.*sec = \([0-9]*\),.*/\1/p'; }
 before="$(boot)"
 [ -n "$before" ] || die "could not read the boot time"
+if [ "$(on 'fdesetup isactive' 2> /dev/null || true)" = true ]; then
+  say "FileVault is on: after the restart $ADDRESS waits at its unlock screen; unlock it at the Mac (type $LOGIN's password there) within $TIMEOUT seconds, and key sign-in works again after that"
+fi
 say "restarting $ADDRESS"
 # Detached, so the session ends cleanly before the Mac goes down.
 as_root "/bin/sh -c '(sleep 2; /sbin/shutdown -r now) > /dev/null 2>&1 &'" > /dev/null || die "sudo refused the restart"
@@ -28,7 +31,7 @@ while [ $((SECONDS - start)) -lt "$TIMEOUT" ]; do
   after="$(boot || true)"
   [ -n "$after" ] && [ "$after" != "$before" ] && break
 done
-[ -n "$after" ] && [ "$after" != "$before" ] || die "$ADDRESS did not come back within $TIMEOUT seconds"
+[ -n "$after" ] && [ "$after" != "$before" ] || die "$ADDRESS did not come back within $TIMEOUT seconds; if FileVault is on, unlock it at the Mac and run verify.sh"
 say "back after $((SECONDS - start)) seconds (new boot time $after)"
 
 if on 'plutil -extract autoLogin raw /etc/headless/settings.json' 2> /dev/null | grep -qx true; then

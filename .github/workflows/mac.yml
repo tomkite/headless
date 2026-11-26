@@ -29,7 +29,8 @@ jobs:
 
   journey:
     # The skill's whole Mac journey, against this runner over SSH, with the
-    # env-file store: new config, first sign-in, admin session, apply, verify.
+    # env-file store: new config, first sign-in, admin session, apply, verify,
+    # and a second apply that changes nothing.
     runs-on: macos-15
     timeout-minutes: 60
     steps:
@@ -58,8 +59,11 @@ jobs:
           ssh-keygen -q -t ed25519 -N '' -f ~/.ssh/headless_test
       - name: Journey
         run: |
+          # The runner's own Homebrew belongs to its runner account, so the
+          # test account turns the homebrew extra off; everything else runs.
           SSH_KEY=~/.ssh/headless_test tests/mac-journey.sh 127.0.0.1 headless \
-            "$RUNNER_TEMP/secrets/mac.env" "$RUNNER_TEMP/mac-config" -- --host-name headless-ci
+            "$RUNNER_TEMP/secrets/mac.env" "$RUNNER_TEMP/mac-config" -- --host-name headless-ci \
+            --extra-off homebrew --extra-on spotlightOff --extra-on siriOff
       - name: The password is in no log
         if: always()
         run: |

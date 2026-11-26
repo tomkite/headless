@@ -3,7 +3,7 @@
 # The headless layer for a NixOS machine that has no keyboard, screen or
 # person in front of it and is reached only over SSH. Import it and set
 # `headless.*`; the headless skill writes those settings for you
-# (skills/headless). The options match the nix-darwin module's where the
+# (skills/headless). The options match the Mac's settings.json where the
 # idea is the same; references/linux.md lists them.
 let
   cfg = config.headless;

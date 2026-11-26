@@ -40,8 +40,8 @@ The way back belongs to the journey: undoing headless returns a machine toward i
 
 ### Declarative where the owner wants it, the same guarantee everywhere
 
-Nix is the default where it fits: a nix-darwin module on a Mac and a NixOS module on NixOS, both usable from the user's own flake without the skill.
-Nix is never a gate: a plain script path with the same settings and the same rerun guarantee is welcome wherever an owner does not want Nix, a Mac included, as it already is for Debian, Ubuntu, Fedora, and Windows.
+Nix is the default where it fits: a NixOS module on NixOS, usable from the user's own flake without the skill.
+Nix is never a gate: a plain script path with the same settings and the same rerun guarantee serves every owner who does not want Nix; in this fork that includes the Mac, set up natively with macOS's own tools and Homebrew, as Debian, Ubuntu, Fedora, and Windows already are.
 The settings are few and specific to running unattended: power, sign-in, SSH, reachability, and the platform extras that keep a machine from stalling or waking someone.
 
 ### Proven on the real thing

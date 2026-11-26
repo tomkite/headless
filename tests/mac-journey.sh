@@ -8,8 +8,8 @@
 #
 # usage: tests/mac-journey.sh ADDRESS LOGIN ENV_FILE CONFIG_DIR [--restart] [-- NEW_CONFIG_OPTION...]
 #
-# ENV_FILE holds HEADLESS_PASSWORD=... (mode 600). The journey builds the
-# module from this checkout (apply.sh --headless-source).
+# ENV_FILE holds HEADLESS_PASSWORD=... (mode 600). The Mac is set up
+# natively, with no Nix.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MAC="$ROOT/skills/headless/scripts/mac"
@@ -27,8 +27,15 @@ step "$MAC/new-config.sh" "$DIR" --address "$ADDRESS" --login "$LOGIN" \
   --password-ref "env:$ENV_FILE:HEADLESS_PASSWORD" --ssh-key "${SSH_KEY:-$HOME/.ssh/id_ed25519}" "$@"
 step "$MAC/connect.sh" "$DIR"
 step "$MAC/admin.sh" "$DIR"
-step "$MAC/apply.sh" "$DIR" --headless-source "$ROOT"
+step "$MAC/apply.sh" "$DIR"
 step "$MAC/verify.sh" "$DIR"
+# A second apply changes nothing.
+before="$(wc -l < "$log")"
+step "$MAC/apply.sh" "$DIR"
+if tail -n +"$((before + 1))" "$log" | grep -q 'headless: changed:'; then
+  echo "FAIL  the second apply changed something"; exit 1
+fi
+echo "ok    the second apply changed nothing"
 if [ "$RESTART" = 1 ]; then
   step "$MAC/restart.sh" "$DIR"
   step "$MAC/verify.sh" "$DIR"

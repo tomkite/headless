@@ -46,9 +46,9 @@ entry.
   1Password, Bitwarden, any command, or, as a last resort, a private env file.
   The scripts read it and pipe it on; it never lands on a command line or in a
   log.
-- **Mac, Linux and Windows** - Apple silicon Macs with
-  [Determinate Nix](https://determinate.systems) and
-  [nix-darwin](https://github.com/nix-darwin/nix-darwin); NixOS with this
+- **Mac, Linux and Windows** - Apple silicon Macs natively, with macOS's own
+  tools and [Homebrew](https://brew.sh) (a `Brewfile` for software; no Nix),
+  with defaults that suit a laptop you still carry; NixOS with this
   repository's NixOS module, any other distribution replaced with NixOS by
   [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) if you
   choose, or Debian, Ubuntu and Fedora kept with a distro-neutral script;
@@ -105,11 +105,11 @@ admin account + password + Remote Login on
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
-│ admin session      │  Determinate Nix · FileVault off · automatic sign-in
+│ admin session      │  Homebrew · automatic sign-in if you want it
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
-│ apply              │  the config · Tailscale if you want it
+│ apply              │  settings · Brewfile · Tailscale if you want it
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
@@ -147,32 +147,30 @@ skills/headless/
   SKILL.md        # the agent contract: the rules and every step
   references/     # mac.md · linux.md · windows.md · secrets.md · tailscale.md
   scripts/        # mac/ · linux/ · windows/: connect, apply, verify, restart, tailscale
-  assets/         # darwin/ · nixos/ · windows/: the default configs the skill copies
+  assets/         # mac/ · nixos/ · windows/: the default configs the skill copies
 modules/
-  darwin/headless.nix   # the nix-darwin module, darwinModules.headless
   nixos/headless.nix    # the NixOS module, nixosModules.headless
-flake.nix         # the modules, templates.darwin (default) and templates.nixos
+flake.nix         # the NixOS module and templates.nixos
 tests/            # the secret helper's test and the Mac, Linux and Windows journeys CI runs
 ```
 
 Ships as an [`npx skills`](https://github.com/vercel-labs/skills) package.
 
-The repository is also a Nix flake, and the modules are the layers the skill
-applies. Use them from your own flake:
+The repository is also a Nix flake for Linux: the NixOS module is the layer
+the skill applies on NixOS. Use it from your own flake:
 
 ```nix
 inputs.headless.url = "github:kunchenguid/headless";
-# in your darwinSystem modules:
-headless.darwinModules.headless
+# in your nixosSystem modules:
+headless.nixosModules.headless
 { headless = { user = "admin"; sshKeys = [ "ssh-ed25519 ..." ]; }; }
 ```
 
-`nixosModules.headless` is used the same way in a `nixosSystem`. The options
-are listed in `skills/headless/references/mac.md` and
-`skills/headless/references/linux.md`.
-`nix flake init -t github:kunchenguid/headless#nixos` (or `#darwin`) gives the
-starting config the skill copies, the NixOS one with a disko disk layout for
-new installs.
+The options are listed in `skills/headless/references/linux.md`.
+`nix flake init -t github:kunchenguid/headless#nixos` gives the starting
+config the skill copies, with a disko disk layout for new installs. Macs need
+no Nix: their settings are in `settings.json` and their software in a
+`Brewfile` (`skills/headless/references/mac.md`).
 
 ## Development
 
