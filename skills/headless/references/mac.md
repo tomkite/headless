@@ -37,6 +37,7 @@ differs, so running it again changes nothing.
 | `keyOnlySsh` | `true` | SSH password, keyboard-interactive and root sign-in off. |
 | `autoLogin` | `false` | Sign the account in on the screen at every start; needs FileVault off. `false` removes a stored password. |
 | `tailscale.enable` | `false` | Run the open-source Tailscale daemon from Homebrew. Leave it off when the Tailscale app is installed. |
+| `tailscale.app` | `false` | Manage Tailscale's own app instead (`new-config.sh --tailscale-app`): install it from Tailscale's package when missing (only if signed by Tailscale's Developer ID, team `W5364U7YZB`, and notarized by Apple), start it when the account is signed in at the screen, and have `verify.sh` check it is running and connected. The app updates itself. Signing in and approving its network extension happen once, in the app at the Mac. Cannot be on with `tailscale.enable`. |
 | `extras.homebrew` | `true` | Install Apple's Command Line Tools and Homebrew, then the `Brewfile`. |
 | `extras.brewAutoUpgrade` | `true` | A launchd job, run as the account, does `brew update`, `brew upgrade` and `brew cleanup` every Sunday at 03:00 (at the next wake if the Mac slept through it); log in `~/Library/Logs/headless-brew-upkeep.log`. Needs `homebrew`. |
 | `extras.neverSleepOnPower` | `true` | On the power adapter the Mac and its disks never sleep (the display sleeps after 10 minutes if it was set to never). On battery macOS's own settings stay. |

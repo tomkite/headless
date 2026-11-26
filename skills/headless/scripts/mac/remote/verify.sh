@@ -92,10 +92,24 @@ if on_ extras.homebrew; then
   fi
 fi
 
-if on_ tailscale.enable; then
+TS_APP=/Applications/Tailscale.app
+if on_ tailscale.app; then
+  if [ -d "$TS_APP" ]; then
+    ok "Tailscale app installed ($(defaults read "$TS_APP/Contents/Info" CFBundleShortVersionString 2> /dev/null); it updates itself)"
+    if pgrep -qf "$TS_APP/Contents/MacOS/Tailscale"; then ok "Tailscale app running"; else fail "Tailscale app running (open it at the Mac, or run apply.sh while signed in)"; fi
+    st="$("$TS_APP/Contents/MacOS/Tailscale" status --json 2> /dev/null | plutil -extract BackendState raw - 2> /dev/null)"
+    if [ "$st" = Running ]; then
+      ok "Tailscale connected as $("$TS_APP/Contents/MacOS/Tailscale" ip -4 2> /dev/null | head -n 1)"
+    else
+      fail "Tailscale connected (state '${st:-unknown}'; sign in from the app at the Mac)"
+    fi
+  else
+    fail "Tailscale app installed (run apply.sh)"
+  fi
+elif on_ tailscale.enable; then
   st="$(/opt/homebrew/bin/tailscale status --json 2> /dev/null | plutil -extract BackendState raw - 2> /dev/null)"
   is "$st" Running "Tailscale connected"
-elif [ -d /Applications/Tailscale.app ]; then
+elif [ -d "$TS_APP" ]; then
   info "the Tailscale app is installed and left as it is"
 fi
 exit 0

@@ -179,7 +179,8 @@ new_config() {
   local DIR="${1:?usage: new-config.sh DIR --address ADDRESS --login LOGIN --password-ref REF [options]}"
   shift
   local ADDRESS="" LOGIN="" PASSWORD_REF="" SSH_KEY="~/.ssh/id_ed25519" HOST_NAME=""
-  local AUTO_LOGIN="${AUTO_LOGIN_DEFAULT:-true}" KEY_ONLY=true TAILSCALE=false TAILSCALE_KEY_REF="" TAILSCALE_LOGIN_SERVER=""
+  local AUTO_LOGIN="${AUTO_LOGIN_DEFAULT:-true}" KEY_ONLY=true TAILSCALE=false TAILSCALE_APP=false TAILSCALE_KEY_REF="" TAILSCALE_LOGIN_SERVER=""
+  local ts_app_json=""
   local OFF=" ${EXTRAS_OFF-} " key_path PUBKEY f e v host_json=null extras_json=""
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -192,6 +193,9 @@ new_config() {
       --no-auto-login) AUTO_LOGIN=false; shift ;;
       --keep-password-ssh) KEY_ONLY=false; shift ;;
       --tailscale) TAILSCALE=true; shift ;;
+      --tailscale-app)
+        [ "${TAILSCALE_APP_SUPPORTED-}" = 1 ] || die "--tailscale-app is for Macs"
+        TAILSCALE_APP=true; shift ;;
       --tailscale-key-ref) TAILSCALE_KEY_REF="${2-}"; shift 2 ;;
       --tailscale-login-server) TAILSCALE_LOGIN_SERVER="${2-}"; shift 2 ;;
       --extra-off)
@@ -209,6 +213,8 @@ new_config() {
   [ "$LOGIN" != root ] || die "--login must be an admin account other than root"
   [ -n "$PASSWORD_REF" ] || die "--password-ref names the store entry holding the password"
   [ -z "$HOST_NAME" ] || [[ "$HOST_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,62}$ ]] || die "--host-name must be letters, digits and dashes"
+  [ "$TAILSCALE" = false ] || [ "$TAILSCALE_APP" = false ] || die "--tailscale and --tailscale-app cannot both be on: two Tailscale clients on one machine fight over the network"
+  [ "$TAILSCALE_APP" = false ] || ts_app_json=', "app": true'
   [ -z "$TAILSCALE_LOGIN_SERVER" ] || [[ "$TAILSCALE_LOGIN_SERVER" =~ ^https?://[A-Za-z0-9.:/_-]+$ ]] || die "--tailscale-login-server must be an http(s) address"
   key_path="$SSH_KEY"
   case "$key_path" in "~/"*) key_path="$HOME/${key_path#\~/}" ;; esac
@@ -249,7 +255,7 @@ new_config() {
   ],
   "keyOnlySsh": $KEY_ONLY,
   "autoLogin": $AUTO_LOGIN,
-  "tailscale": { "enable": $TAILSCALE },
+  "tailscale": { "enable": $TAILSCALE$ts_app_json },
   "extras": {$extras_json
   }
 }

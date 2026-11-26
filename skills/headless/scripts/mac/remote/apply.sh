@@ -180,6 +180,34 @@ else
   fi
 fi
 
+# --- Tailscale's own app (tailscale.app): installed from Tailscale's
+# signed package when missing; it updates itself afterwards, and user.sh
+# starts it. ---
+TS_APP=/Applications/Tailscale.app
+TS_PKG_URL=https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg
+TS_TEAM=W5364U7YZB
+if flag tailscale.app false; then
+  ! flag tailscale.enable false || die "tailscale.enable and tailscale.app cannot both be on; pick one"
+  if [ ! -d "$TS_APP" ]; then
+    say "installing the Tailscale app from $TS_PKG_URL"
+    tmp="$(mktemp -d)"
+    curl -fsSL --retry 3 -o "$tmp/Tailscale.pkg" "$TS_PKG_URL" || { rm -rf "$tmp"; die "could not download the Tailscale package"; }
+    # Installed only when Apple's checks say Tailscale's own Developer ID
+    # signed it and Apple notarized it.
+    sig="$(pkgutil --check-signature "$tmp/Tailscale.pkg" 2>&1 || true)"
+    if ! grep -q "Developer ID Installer: Tailscale Inc. ($TS_TEAM)" <<< "$sig" \
+      || ! grep -qi "signed by a developer certificate issued by Apple" <<< "$sig" \
+      || ! grep -qi "trusted by the Apple notary service" <<< "$sig"; then
+      rm -rf "$tmp"
+      die "the Tailscale package is not signed by Tailscale's Developer ID ($TS_TEAM) and notarized by Apple; nothing installed"
+    fi
+    installer -pkg "$tmp/Tailscale.pkg" -target / > /dev/null || { rm -rf "$tmp"; die "the Tailscale package did not install"; }
+    rm -rf "$tmp"
+    changed "Tailscale app installed ($(defaults read "$TS_APP/Contents/Info" CFBundleShortVersionString 2> /dev/null))"
+    warn "open Tailscale at the Mac once to approve its network extension and sign in"
+  fi
+fi
+
 # --- Tailscale: the open-source daemon from Homebrew (user.sh installs the
 # formula), run by launchd before anyone signs in. ---
 if flag tailscale.enable false; then
