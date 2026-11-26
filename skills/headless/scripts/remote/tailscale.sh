@@ -12,10 +12,10 @@ MODE="${1:?}" HOST="${2:?}" SERVER="${3:?}"
 [ "$(id -u)" -eq 0 ] || die "run tailscale.sh as root"
 ROOT_HOME="$(cd ~root && pwd)"
 export HOME="$ROOT_HOME"
-# NixOS puts it on the system profile, distribution packages in /usr/bin,
-# Homebrew (on a Mac) in /opt/homebrew/bin.
+# Distribution packages put it in /usr/bin, Homebrew (on a Mac) in
+# /opt/homebrew/bin.
 TS=""
-for t in /run/current-system/sw/bin/tailscale /usr/bin/tailscale /opt/homebrew/bin/tailscale /usr/local/bin/tailscale; do
+for t in /usr/bin/tailscale /opt/homebrew/bin/tailscale /usr/local/bin/tailscale; do
   [ -x "$t" ] && { TS="$t"; break; }
 done
 [ -n "$TS" ] || die "Tailscale is not installed; run apply.sh with Tailscale on first"

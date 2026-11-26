@@ -1,8 +1,8 @@
 ---
 name: headless
-description: Set up a headless Mac (Apple silicon), Linux or Windows machine over SSH, step by step, from "an admin account with a password and SSH on" to a configured machine with key-only SSH, never-sleep settings, optional automatic sign-in and optional Tailscale - on a Mac natively with macOS's own tools and Homebrew (a Brewfile for software; no Nix), on Linux with a NixOS module (installing NixOS with nixos-anywhere if the user wants) or a distro-neutral script for Debian, Ubuntu and Fedora, on Windows 11 or Windows Server with a rerunnable PowerShell configuration - then restart it and confirm it comes back. Use when the user wants to set up, configure, update or check a headless Mac mini, a MacBook they reach over SSH, a Linux server, Windows PC or other machine they reach only over SSH. The admin password stays in the user's secret store (Automic Vault, 1Password, Bitwarden, any command, or a private env file); you only ever name the store entry.
+description: Set up a headless Mac (Apple silicon), Linux or Windows machine over SSH, step by step, from "an admin account with a password and SSH on" to a configured machine with key-only SSH, never-sleep settings, optional automatic sign-in and optional Tailscale - on a Mac natively with macOS's own tools and Homebrew (a Brewfile for software; no Nix), on Linux with a distro-neutral script for Debian, Ubuntu and Fedora, on Windows 11 or Windows Server with a rerunnable PowerShell configuration - then restart it and confirm it comes back. Use when the user wants to set up, configure, update or check a headless Mac mini, a MacBook they reach over SSH, a Linux server, Windows PC or other machine they reach only over SSH. The admin password stays in the user's secret store (Automic Vault, 1Password, Bitwarden, any command, or a private env file); you only ever name the store entry.
 license: MIT
-compatibility: Runs on macOS or Linux with bash, ssh and tar (and Nix, only to install NixOS on a Linux machine). The machine being set up is an Apple silicon Mac on a current macOS (tested on macOS 26), or an x86_64 or aarch64 Linux machine with systemd running NixOS, Debian, Ubuntu or Fedora, or a Windows 11 (Home or Pro) or Windows Server 2025 machine, x86_64 or Arm64 (tested on 26H2 and Server 2025).
+compatibility: Runs on macOS or Linux with bash, ssh and tar; no Nix anywhere. The machine being set up is an Apple silicon Mac on a current macOS (tested on macOS 26 and 27), or an x86_64 or aarch64 Linux machine with systemd running Debian, Ubuntu or Fedora, or a Windows 11 (Home or Pro) or Windows Server 2025 machine, x86_64 or Arm64 (tested on 26H2 and Server 2025).
 metadata:
   short-description: "Headless Mac, Linux or Windows setup over SSH, password never seen"
 ---
@@ -204,18 +204,6 @@ extra set (for example, Spotlight stays off) and macOS's default does not
 come back. Tell the user so, and change that setting at the Mac, or in
 `machine.sh`, if they want it back.
 
-## Your own config (NixOS)
-
-On NixOS the config folder's `flake.nix` exposes
-`nixosConfigurations.machine`, which imports
-`headless.nixosModules.headless` and sets `headless.*`
-(`references/linux.md` lists the options). A folder with its own
-`flake.nix` is used as it is: `apply.sh` copies and builds it and brings
-nothing in from `/etc/nixos`. Keep `settings.json` (from `new-config.sh`)
-beside it: `apply.sh` checks it and `verify.sh` reads the machine's own
-record. Expose the host under its host name too if `nixos-rebuild switch`
-at the machine should find it without `--flake /etc/nixos#machine`.
-
 ## When something fails
 
 - Read the script's last `headless:` line; it says what failed and what to
@@ -250,44 +238,11 @@ $SKILL/scripts/linux/new-config.sh ~/headless/box \
 ```
 
 **L4. First sign-in.** `$SKILL/scripts/linux/connect.sh ~/headless/box`,
-as in step 4. Its last lines say which distribution the machine runs and
-what comes next.
+as in step 4. Its last lines say which distribution the machine runs. A
+machine running NixOS is refused: this fork sets up Debian, Ubuntu and
+Fedora only.
 
-**L5. NixOS, or not.**
-
-- **It runs NixOS:** go to L6. The first `apply.sh` copies the machine's own
-  `/etc/nixos` into the folder (`nixos/`), so its boot loader, disks and
-  other settings stay, and the machine stays on the NixOS release it runs
-  (such as 26.05, read from root's channel). If `apply.sh` cannot tell the
-  release, it stops; ask the user which one and pass `--nixos-branch
-  nixos-26.05` (or `nixos-unstable`). Ask the user to check that copy holds
-  nothing private before they push the folder anywhere. From then on each
-  `apply.sh` puts the folder in `/etc/nixos` (the old one is kept as
-  `/etc/nixos.before-headless`), so `nixos-rebuild switch` and automatic
-  updates at the machine build the same setup; an automatic update takes
-  the newest nixpkgs of the machine's release, and once the machine boots a
-  system built from it, `apply.sh` keeps that newer one and writes it into
-  the folder's `flake.lock` to commit.
-- **Any other distribution:** offer to **replace it with NixOS**, using
-  nixos-anywhere. Say plainly: this **erases the whole disk**, everything on
-  it is gone, and it needs Nix on this computer, an x86_64 or aarch64
-  machine with 2 GB of memory and Secure Boot off. The machine keeps its
-  address (a fixed one is written into the new setup), SSH host key and the
-  account's password; it needs the machine reached at an IPv4 address on
-  its wired network card, and stops, changing nothing, otherwise. If the
-  user agrees:
-
-  ```sh
-  $SKILL/scripts/linux/install-nixos.sh ~/headless/box --list-disks
-  $SKILL/scripts/linux/install-nixos.sh ~/headless/box --disk /dev/DISK --yes-wipe
-  ```
-
-  Show the disk list and have the user name the disk; pass `--yes-wipe`
-  only after they agreed to erase that disk. It takes 5 to 20 minutes.
-- **The user keeps their distribution** (Debian, Ubuntu or Fedora): go to
-  L6; `apply.sh` runs the distro-neutral script instead.
-
-**L6. Apply, then verify, restart, verify.**
+**L5. Apply, then verify, restart, verify.**
 
 ```sh
 $SKILL/scripts/linux/apply.sh ~/headless/box
@@ -296,18 +251,15 @@ $SKILL/scripts/linux/restart.sh ~/headless/box
 $SKILL/scripts/linux/verify.sh ~/headless/box
 ```
 
-On NixOS `apply.sh` builds the system on the machine and switches to it; on
-another distribution it runs the script, which prints one `changed:` line
+`apply.sh` runs the distro-neutral script, which prints one `changed:` line
 per change and none when run again. Commit the folder afterwards. For
 Tailscale, run `$SKILL/scripts/linux/tailscale.sh ~/headless/box` as in
 step 6. `restart.sh` restarts the machine, waits for a new boot, and with
 automatic sign-in on checks the session started before anyone signed in.
 Tell the user before restarting.
 
-Updates: edit `settings.json` (or `machine.nix` on NixOS) and run `apply.sh`
-and `verify.sh` again. Other distributions install updates by themselves
-(`autoUpdates`). On NixOS, delete `flake.lock` and run `apply.sh` to move
-to newer inputs on the same release.
+Updates: edit `settings.json` and run `apply.sh` and `verify.sh` again. The
+machine installs its own updates (`autoUpdates`).
 
 ## Windows machines
 

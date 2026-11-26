@@ -6,10 +6,8 @@
 # shellcheck source=skills/headless/scripts/mac/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../mac/lib.sh"
 REMOTE_SRC="$SCRIPTS/linux/remote"
-# NixOS puts nix on the system profile; the flags work without any setting.
-NIXOS_NIX="/run/current-system/sw/bin/nix --extra-experimental-features 'nix-command flakes'"
 
-# os_kind: "nixos" when the machine runs NixOS, otherwise its os-release ID.
+# os_kind: the machine's os-release ID (debian, ubuntu, fedora, nixos...).
 os_kind() { on '. /etc/os-release && printf "%s\n" "$ID"'; }
 
 # settings_env: settings.json of the config folder as the KEY=value lines

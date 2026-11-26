@@ -32,16 +32,16 @@ Key-only sign-in turns on only after the user's key has been proven to work, and
 
 The skill asks before anything the user did not choose, and never works around a failed step by loosening security.
 Handing the agent a set of machines is consent to set up each of them; the work may run in parallel, but every machine still gets its own steps, results, and verify through a restart.
-Destructive or one-way actions - erasing a disk to install NixOS, uninstalling a Tailscale another account joined - happen only after the user agrees.
+Destructive or one-way actions - turning FileVault off, uninstalling a Tailscale another account joined - happen only after the user agrees.
 Where the user already chose the outcome, as with automatic sign-in requiring FileVault off, the skill acts and asks only when the platform refuses.
 Optional reach stays optional: Tailscale is offered, never required.
-An existing NixOS machine keeps its own config, its release, and its own updates; the skill layers its settings on and refuses rather than overwrites what it does not own.
+A machine keeps its own config and its own updates; the skill layers its settings on and refuses rather than overwrites what it does not own.
 The way back belongs to the journey: undoing headless returns a machine toward its platform defaults as far as it can, and tells the user plainly what it cannot restore.
 
-### Declarative where the owner wants it, the same guarantee everywhere
+### Plain scripts, the same guarantee everywhere
 
-Nix is the default where it fits: a NixOS module on NixOS, usable from the user's own flake without the skill.
-Nix is never a gate: a plain script path with the same settings and the same rerun guarantee serves every owner who does not want Nix; in this fork that includes the Mac, set up natively with macOS's own tools and Homebrew, as Debian, Ubuntu, Fedora, and Windows already are.
+This fork uses no Nix: every platform takes a plain script path with the same settings and the same rerun guarantee - the Mac natively with macOS's own tools and Homebrew, Debian, Ubuntu and Fedora with the distro-neutral script, and Windows with PowerShell.
+NixOS is not supported here; the original repository keeps its NixOS module and nixos-anywhere install.
 The settings are few and specific to running unattended: power, sign-in, SSH, reachability, and the platform extras that keep a machine from stalling or waking someone.
 
 ### Proven on the real thing

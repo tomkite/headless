@@ -1,7 +1,7 @@
 #!/bin/bash
 # verify.sh - read every headless setting back from the Linux machine and
 # compare it with what it should be (/etc/headless/settings.env, written by
-# the NixOS module or the distro-neutral script). Needs no password: it
+# the distro-neutral script). Needs no password: it
 # signs in by key and runs nothing as root.
 #
 # usage: verify.sh DIR

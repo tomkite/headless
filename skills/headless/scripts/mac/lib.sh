@@ -17,8 +17,6 @@ set -euo pipefail
 
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REMOTE_SRC="$SCRIPTS/mac/remote"
-# Nix on this computer (linux/install-nixos.sh needs it; the Mac steps do not).
-NIX=/nix/var/nix/profiles/default/bin/nix
 
 die() { echo "headless: $*" >&2; exit 1; }
 say() { echo "headless: $*"; }
@@ -175,9 +173,8 @@ as_root() {
 # named with --extra-off), optionally EXTRAS_OFF (a space-separated list of
 # extras that start off and turn on with --extra-on) and AUTO_LOGIN_DEFAULT
 # (true unless set; --auto-login and --no-auto-login override it), and
-# TEMPLATE (a folder whose flake.nix and
-# machine.nix, or the files TEMPLATE_FILES names, a new config folder starts
-# with, or empty).
+# TEMPLATE (a folder holding the files TEMPLATE_FILES names, which a new
+# config folder starts with, or empty).
 new_config() {
   local DIR="${1:?usage: new-config.sh DIR --address ADDRESS --login LOGIN --password-ref REF [options]}"
   shift
@@ -231,7 +228,7 @@ new_config() {
   esac
 
   if [ -n "$TEMPLATE" ]; then
-    for f in ${TEMPLATE_FILES:-flake.nix machine.nix}; do
+    for f in ${TEMPLATE_FILES-}; do
       [ -e "$DIR/$f" ] || cp "$TEMPLATE/$f" "$DIR/$f"
     done
   fi

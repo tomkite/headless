@@ -32,8 +32,7 @@ The Mac joins with its host name. `verify.sh` then checks it is connected.
 ## On Linux
 
 The same settings and the same two ways to join, with
-`scripts/linux/tailscale.sh`. On NixOS the module runs `tailscaled`; on
-Debian, Ubuntu and Fedora `apply.sh` installs Tailscale from Tailscale's own
+`scripts/linux/tailscale.sh`. On Debian, Ubuntu and Fedora `apply.sh` installs Tailscale from Tailscale's own
 signed package repository and starts it. An existing Tailscale install is
 kept as it is.
 

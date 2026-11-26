@@ -1,6 +1,6 @@
 #!/bin/bash
 # remote/verify.sh - compare the Linux machine with /etc/headless/settings.env
-# (written by the NixOS module or the distro-neutral script), as the login,
+# (written by the distro-neutral script), as the login,
 # without root. One "ok" or "FAIL" line per setting.
 set -uo pipefail
 S=/etc/headless/settings.env
@@ -12,14 +12,9 @@ get() { sed -n "s/^$1=//p" "$S" | head -n 1; }
 
 if [ ! -f "$S" ]; then fail "headless settings applied (no $S; run apply.sh)"; exit 0; fi
 kind="$(get KIND)"
-if [ "$kind" = nixos ]; then
-  v="$(/run/current-system/sw/bin/nix --version 2> /dev/null)" && ok "Nix: $v" || fail "Nix installed"
-  is "$(readlink -f /run/current-system)" "$(readlink -f /nix/var/nix/profiles/system)" "NixOS runs the system it boots ($(readlink /run/current-system))"
-else
-  # shellcheck source=/dev/null
-  . /etc/os-release
-  ok "distro-neutral script applied on $PRETTY_NAME"
-fi
+# shellcheck source=/dev/null
+. /etc/os-release
+ok "distro-neutral script applied on $PRETTY_NAME"
 
 user="$(get USER_NAME)"
 is "$(id -un)" "$user" "signed in as the configured user"
@@ -27,11 +22,7 @@ host="$(get HOST_NAME)"
 [ -z "$host" ] || is "$(hostname)" "$host" "host name"
 
 if [ "$(get KEY_ONLY)" = true ]; then
-  if [ "$kind" = nixos ]; then
-    f=/etc/ssh/sshd_config
-  else
-    f=/etc/ssh/sshd_config.d/00-headless.conf
-  fi
+  f=/etc/ssh/sshd_config.d/00-headless.conf
   if [ ! -r "$f" ]; then
     na "sshd key-only setting in $f (only root can read it; the password sign-in check covers it)"
   elif grep -qx 'PasswordAuthentication no' "$f"; then
@@ -59,7 +50,6 @@ fi
 
 if [ "$(get AUTO_UPDATES)" = true ]; then
   case "$kind:$(get PACKAGES)" in
-    nixos:*) na "automatic updates (on NixOS, update flake.lock in the config folder and apply, or turn on the machine's own system.autoUpgrade)" ;;
     script:apt)
       [[ "$(dpkg-query -W -f='${Status}' unattended-upgrades 2> /dev/null)" == *'install ok installed'* ]] \
         && ok "unattended-upgrades installed" || fail "unattended-upgrades installed"
