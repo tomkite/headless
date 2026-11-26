@@ -78,6 +78,15 @@ if on_ extras.homebrew; then
       HOMEBREW_NO_AUTO_UPDATE=1 "$BREW" bundle check --no-upgrade --file ~/.headless/config/Brewfile > /dev/null 2>&1 \
         && ok "everything in the Brewfile is installed" || fail "everything in the Brewfile is installed (run apply.sh)"
     fi
+    if on_ extras.brewAutoUpgrade || [ -z "$(get extras.brewAutoUpgrade)" ]; then
+      if launchctl print system/com.headless.brew-upkeep > /dev/null 2>&1; then
+        ok "Homebrew upkeep scheduled (every Sunday at 03:00)"
+        last="$(grep '^== brew upkeep end' ~/Library/Logs/headless-brew-upkeep.log 2> /dev/null | tail -n 1)"
+        if [ -n "$last" ]; then info "Homebrew upkeep last run: ${last#== brew upkeep end }"; else info "Homebrew upkeep last run: not yet"; fi
+      else
+        fail "Homebrew upkeep scheduled (run apply.sh)"
+      fi
+    fi
   else
     fail "Homebrew installed (run admin.sh)"
   fi

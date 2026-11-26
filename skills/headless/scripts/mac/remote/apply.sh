@@ -113,6 +113,57 @@ if flag extras.spotlightOff false && ! mdutil -s / 2> /dev/null | grep -q 'Index
   if mdutil -a -i off > /dev/null; then changed "Spotlight indexing off"; else warn "Spotlight indexing could not be turned off"; fi
 fi
 
+# --- Homebrew upkeep: a launchd job, run as the account (not root), that
+# updates, upgrades and cleans up Homebrew every Sunday at 03:00. launchd
+# runs a time missed while the Mac slept at the next wake. ---
+upkeep=/Library/LaunchDaemons/com.headless.brew-upkeep.plist
+upkeep_label=com.headless.brew-upkeep
+if flag extras.homebrew true && flag extras.brewAutoUpgrade true; then
+  [ -x /opt/homebrew/bin/brew ] || die "Homebrew is not on this Mac yet; run admin.sh first"
+  log="$home/Library/Logs/headless-brew-upkeep.log"
+  # shellcheck disable=SC2016 # runs later, in the job's own shell
+  job='echo "== brew upkeep start $(date "+%F %T")"; eval "$(/opt/homebrew/bin/brew shellenv)"; rc=0; brew update || rc=$?; brew upgrade || rc=$?; brew cleanup --prune=30 || rc=$?; echo "== brew upkeep end $(date "+%F %T") exit $rc"; exit $rc'
+  want_plist="$(cat <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$upkeep_label</string>
+  <key>UserName</key><string>$LOGIN</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>-c</string><string>$job</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key><string>$home</string>
+    <key>HOMEBREW_NO_ENV_HINTS</key><string>1</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>$log</string>
+  <key>StandardErrorPath</key><string>$log</string>
+  <key>LowPriorityIO</key><true/>
+  <key>Nice</key><integer>10</integer>
+</dict>
+</plist>
+PLIST
+)"
+  if [ "$(cat "$upkeep" 2> /dev/null || true)" != "$want_plist" ]; then
+    printf '%s\n' "$want_plist" > "$upkeep.new"
+    plutil -lint "$upkeep.new" > /dev/null || { rm -f "$upkeep.new"; die "the Homebrew upkeep job did not make a valid plist"; }
+    chown root:wheel "$upkeep.new"
+    chmod 0644 "$upkeep.new"
+    launchctl bootout "system/$upkeep_label" 2> /dev/null || true
+    mv -f "$upkeep.new" "$upkeep"
+    changed "Homebrew upkeep every Sunday at 03:00 (log: $log)"
+  fi
+  launchctl print "system/$upkeep_label" > /dev/null 2>&1 || launchctl bootstrap system "$upkeep" \
+    || die "launchd did not load $upkeep"
+elif [ -e "$upkeep" ]; then
+  launchctl bootout "system/$upkeep_label" 2> /dev/null || true
+  rm -f "$upkeep"
+  changed "Homebrew upkeep job removed"
+fi
+
 # --- Automatic sign-in. admin.sh stores the password; this only removes
 # it when automatic sign-in is off. ---
 if flag autoLogin false; then

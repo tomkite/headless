@@ -9,6 +9,7 @@
   "tailscale": { "enable": false },
   "extras": {
     "homebrew": true,
+    "brewAutoUpgrade": true,
     "neverSleepOnPower": true,
     "wakeOnLan": true,
     "powerNapOff": true,

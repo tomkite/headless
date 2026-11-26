@@ -38,6 +38,7 @@ differs, so running it again changes nothing.
 | `autoLogin` | `false` | Sign the account in on the screen at every start; needs FileVault off. `false` removes a stored password. |
 | `tailscale.enable` | `false` | Run the open-source Tailscale daemon from Homebrew. Leave it off when the Tailscale app is installed. |
 | `extras.homebrew` | `true` | Install Apple's Command Line Tools and Homebrew, then the `Brewfile`. |
+| `extras.brewAutoUpgrade` | `true` | A launchd job, run as the account, does `brew update`, `brew upgrade` and `brew cleanup` every Sunday at 03:00 (at the next wake if the Mac slept through it); log in `~/Library/Logs/headless-brew-upkeep.log`. Needs `homebrew`. |
 | `extras.neverSleepOnPower` | `true` | On the power adapter the Mac and its disks never sleep (the display sleeps after 10 minutes if it was set to never). On battery macOS's own settings stay. |
 | `extras.wakeOnLan` | `true` | Wake for network access on the power adapter. |
 | `extras.powerNapOff` | `true` | Power Nap off on battery and adapter. |
@@ -61,11 +62,11 @@ exception: `false` removes the stored password.
 
 - `Brewfile`: what Homebrew keeps on the Mac. `apply.sh` runs `brew bundle
   install --no-upgrade` as the account, so anything listed and missing is
-  installed; nothing is upgraded or removed. Upgrade with `brew upgrade` on
-  the Mac (or add it to `machine.sh` if you want every apply to upgrade).
-  Casks whose installers need sudo fail over SSH (sudo has no terminal
-  there); install those at the Mac, or once with `ssh -t` and `brew install
-  --cask NAME`.
+  installed; nothing is removed. Upgrades come from the weekly
+  `brewAutoUpgrade` job, or `brew upgrade` on the Mac any time. Casks that
+  update themselves (`auto_updates`) are left to their own updater. Casks
+  whose installers need sudo fail over SSH and in the weekly job (sudo has
+  no terminal there); install and upgrade those at the Mac.
 - `machine.sh`: your own additions, run as the account (not root) after
   `brew bundle` on every apply, with Homebrew on `PATH`. Keep it safe to
   run again.
@@ -114,6 +115,8 @@ where it stopped.
   the first value it reads, so it is named to come before macOS's own
   `100-macos.conf`.
 - `/opt/homebrew`: Homebrew, owned by the account.
+- `/Library/LaunchDaemons/com.headless.brew-upkeep.plist`: the weekly
+  Homebrew upkeep job (runs as the account, not root).
 - `/etc/kcpassword`: the automatic sign-in password, only when it is on.
 
 ## Common failures
@@ -135,5 +138,7 @@ where it stopped.
 
 Delete `/etc/ssh/sshd_config.d/000-headless.conf` (password sign-in comes
 back), `/etc/headless` and `~/.headless`, and `/etc/kcpassword` if present.
+Stop the upkeep job with `sudo launchctl bootout
+system/com.headless.brew-upkeep` and delete its plist.
 Power settings stay as set; `sudo pmset -c sleep 1` and the like change
 them back. Homebrew stays; its own uninstaller removes it.

@@ -16,11 +16,12 @@
 #
 # The defaults suit a laptop that is still carried around: automatic
 # sign-in off (so FileVault stays on), and these extras on: homebrew,
-# neverSleepOnPower, wakeOnLan, powerNapOff. These start off and turn on
-# with --extra-on: startAfterPowerLoss, spotlightOff, siriOff.
+# brewAutoUpgrade, neverSleepOnPower, wakeOnLan, powerNapOff. These start
+# off and turn on with --extra-on: startAfterPowerLoss, spotlightOff,
+# siriOff.
 # shellcheck source=skills/headless/scripts/mac/lib.sh
 . "$(dirname "$0")/lib.sh"
-EXTRAS=(homebrew neverSleepOnPower wakeOnLan powerNapOff startAfterPowerLoss spotlightOff siriOff)
+EXTRAS=(homebrew brewAutoUpgrade neverSleepOnPower wakeOnLan powerNapOff startAfterPowerLoss spotlightOff siriOff)
 EXTRAS_OFF="startAfterPowerLoss spotlightOff siriOff"
 AUTO_LOGIN_DEFAULT=false
 TEMPLATE="$SCRIPTS/../assets/mac"

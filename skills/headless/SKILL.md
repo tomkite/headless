@@ -97,7 +97,8 @@ Ask these choices, with the defaults in **bold**:
   has the Tailscale app (`/Applications/Tailscale.app`), keep this off and
   leave the app as it is; `apply.sh` refuses to start a second Tailscale.
 - Extras **on** (turn off with `--extra-off`): `homebrew` (Homebrew and the
-  `Brewfile`), `neverSleepOnPower`, `wakeOnLan`, `powerNapOff`. Extras
+  `Brewfile`), `brewAutoUpgrade` (weekly update, upgrade and cleanup),
+  `neverSleepOnPower`, `wakeOnLan`, `powerNapOff`. Extras
   **off** (turn on with `--extra-on`): `startAfterPowerLoss`,
   `spotlightOff`, `siriOff`. `references/mac.md` says what each does.
 - Software: show the default `Brewfile` (after the folder is made) and ask
@@ -196,8 +197,8 @@ folder is, and how to update (below).
 
 Edit `Brewfile`, `machine.sh` or `settings.json` in the config folder, then
 run `apply.sh` and `verify.sh` again. The password is read from the store
-each time. `apply.sh` installs what the Brewfile adds but upgrades and
-removes nothing; upgrades are `brew upgrade` on the Mac. Turning an extra
+each time. `apply.sh` installs what the Brewfile adds and removes nothing;
+the weekly `brewAutoUpgrade` job upgrades (or `brew upgrade` on the Mac). Turning an extra
 off later only stops the skill managing it: the Mac keeps the value the
 extra set (for example, Spotlight stays off) and macOS's default does not
 come back. Tell the user so, and change that setting at the Mac, or in
