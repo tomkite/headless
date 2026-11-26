@@ -46,13 +46,10 @@ entry.
   1Password, Bitwarden, any command, or, as a last resort, a private env file.
   The scripts read it and pipe it on; it never lands on a command line or in a
   log.
-- **Mac, Linux and Windows** - Apple silicon Macs with
-  [Determinate Nix](https://determinate.systems) and
-  [nix-darwin](https://github.com/nix-darwin/nix-darwin); NixOS with this
-  repository's NixOS module, any other distribution replaced with NixOS by
-  [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) if you
-  choose, or Debian, Ubuntu and Fedora kept with a distro-neutral script;
-  Windows 11 and Windows Server 2025 with a rerunnable PowerShell script over
+- **Mac, Linux and Windows** - Apple silicon Macs natively, with macOS's own
+  tools and [Homebrew](https://brew.sh) (a `Brewfile` for software; no Nix),
+  with defaults that suit a laptop you still carry; Debian, Ubuntu and
+  Fedora with a distro-neutral script; Windows 11 and Windows Server 2025 with a rerunnable PowerShell script over
   OpenSSH.
 - **Every step reruns safely** - each step says what it does, runs, and shows
   its result; the last step reads every setting back, restarts the machine
@@ -73,10 +70,9 @@ $ npx skills add kunchenguid/headless -g
 
 ## What it needs
 
-- **Your computer:** macOS or Linux with bash, ssh and tar (and Nix, only to
-  install NixOS on a Linux machine).
+- **Your computer:** macOS or Linux with bash, ssh and tar. No Nix.
 - **The machine:** an Apple silicon Mac on a current macOS, an x86_64 or
-  aarch64 Linux machine with systemd, or a Windows 11 or Windows Server 2025
+  aarch64 Linux machine with systemd running Debian, Ubuntu or Fedora, or a Windows 11 or Windows Server 2025
   PC - with an admin account that has a password, and remote login on.
 - **A secret store** for that password. Tailscale is optional.
 
@@ -105,11 +101,11 @@ admin account + password + Remote Login on
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
-│ admin session      │  Determinate Nix · FileVault off · automatic sign-in
+│ admin session      │  Homebrew · automatic sign-in if you want it
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
-│ apply              │  the config · Tailscale if you want it
+│ apply              │  settings · Brewfile · Tailscale if you want it
 └─────────┬──────────┘
           ▼
 ┌────────────────────┐
@@ -120,9 +116,7 @@ admin account + password + Remote Login on
 ```
 
 A Linux machine takes the same path, without the admin session: after the
-first sign-in, a machine on NixOS is applied as it is; on another
-distribution you choose between installing NixOS (the whole disk is erased)
-and keeping it with the script.
+first sign-in, apply runs the distro-neutral script.
 
 A Windows PC starts with a few lines you paste in an administrator
 PowerShell to turn OpenSSH Server on (and, on a home or office network
@@ -147,32 +141,16 @@ skills/headless/
   SKILL.md        # the agent contract: the rules and every step
   references/     # mac.md · linux.md · windows.md · secrets.md · tailscale.md
   scripts/        # mac/ · linux/ · windows/: connect, apply, verify, restart, tailscale
-  assets/         # darwin/ · nixos/ · windows/: the default configs the skill copies
-modules/
-  darwin/headless.nix   # the nix-darwin module, darwinModules.headless
-  nixos/headless.nix    # the NixOS module, nixosModules.headless
-flake.nix         # the modules, templates.darwin (default) and templates.nixos
+  assets/         # mac/ · windows/: the default configs the skill copies
 tests/            # the secret helper's test and the Mac, Linux and Windows journeys CI runs
 ```
 
 Ships as an [`npx skills`](https://github.com/vercel-labs/skills) package.
 
-The repository is also a Nix flake, and the modules are the layers the skill
-applies. Use them from your own flake:
-
-```nix
-inputs.headless.url = "github:kunchenguid/headless";
-# in your darwinSystem modules:
-headless.darwinModules.headless
-{ headless = { user = "admin"; sshKeys = [ "ssh-ed25519 ..." ]; }; }
-```
-
-`nixosModules.headless` is used the same way in a `nixosSystem`. The options
-are listed in `skills/headless/references/mac.md` and
-`skills/headless/references/linux.md`.
-`nix flake init -t github:kunchenguid/headless#nixos` (or `#darwin`) gives the
-starting config the skill copies, the NixOS one with a disko disk layout for
-new installs.
+This fork uses no Nix anywhere. A Mac's settings are in `settings.json` and
+its software in a `Brewfile` (`skills/headless/references/mac.md`); a Linux
+machine's settings are in `settings.json`
+(`skills/headless/references/linux.md`).
 
 ## Development
 
@@ -187,16 +165,13 @@ npx skills add ./ -l
 npx skills add ./ -g -y
 
 # checks
-nix flake check                 # modules and default configs build (this system's)
 tests/secret-run.test.sh        # the password is piped, never printed
 shellcheck -x tests/*.sh skills/headless/scripts/*.sh skills/headless/scripts/*/*.sh skills/headless/scripts/*/remote/*.sh
 ```
 
 The `mac` workflow runs the whole journey on a GitHub-hosted Mac, over SSH
 to itself. The `linux` workflow runs the distro-neutral script on a
-GitHub-hosted Ubuntu runner over SSH to itself, and installs NixOS with
-nixos-anywhere on an x86_64 Ubuntu virtual machine there, then applies,
-restarts and verifies it. The `windows` workflow checks every PowerShell
+GitHub-hosted Ubuntu runner over SSH to itself. The `windows` workflow checks every PowerShell
 file parses, then runs the Windows journey on a GitHub-hosted Windows Server
 runner over SSH to itself, from Ubuntu under WSL. Each checks its log never
 holds the password.

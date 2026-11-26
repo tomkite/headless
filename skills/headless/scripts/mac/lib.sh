@@ -17,7 +17,6 @@ set -euo pipefail
 
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REMOTE_SRC="$SCRIPTS/mac/remote"
-NIX=/nix/var/nix/profiles/default/bin/nix
 
 die() { echo "headless: $*" >&2; exit 1; }
 say() { echo "headless: $*"; }
@@ -170,16 +169,18 @@ as_root() {
 }
 
 # new_config DIR OPTION...: new-config.sh's work, for each platform's
-# entry point. The caller sets EXTRAS (the platform's extras, all on unless
-# named with --extra-off) and TEMPLATE (a folder whose flake.nix and
-# machine.nix, or the files TEMPLATE_FILES names, a new config folder starts
-# with, or empty).
+# entry point. The caller sets EXTRAS (the platform's extras, on unless
+# named with --extra-off), optionally EXTRAS_OFF (a space-separated list of
+# extras that start off and turn on with --extra-on) and AUTO_LOGIN_DEFAULT
+# (true unless set; --auto-login and --no-auto-login override it), and
+# TEMPLATE (a folder holding the files TEMPLATE_FILES names, which a new
+# config folder starts with, or empty).
 new_config() {
   local DIR="${1:?usage: new-config.sh DIR --address ADDRESS --login LOGIN --password-ref REF [options]}"
   shift
   local ADDRESS="" LOGIN="" PASSWORD_REF="" SSH_KEY="~/.ssh/id_ed25519" HOST_NAME=""
-  local AUTO_LOGIN=true KEY_ONLY=true TAILSCALE=false TAILSCALE_KEY_REF="" TAILSCALE_LOGIN_SERVER=""
-  local OFF=" " key_path PUBKEY f e v host_json=null extras_json=""
+  local AUTO_LOGIN="${AUTO_LOGIN_DEFAULT:-true}" KEY_ONLY=true TAILSCALE=false TAILSCALE_KEY_REF="" TAILSCALE_LOGIN_SERVER=""
+  local OFF=" ${EXTRAS_OFF-} " key_path PUBKEY f e v host_json=null extras_json=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --address) ADDRESS="${2-}"; shift 2 ;;
@@ -187,6 +188,7 @@ new_config() {
       --password-ref) PASSWORD_REF="${2-}"; shift 2 ;;
       --ssh-key) SSH_KEY="${2-}"; shift 2 ;;
       --host-name) HOST_NAME="${2-}"; shift 2 ;;
+      --auto-login) AUTO_LOGIN=true; shift ;;
       --no-auto-login) AUTO_LOGIN=false; shift ;;
       --keep-password-ssh) KEY_ONLY=false; shift ;;
       --tailscale) TAILSCALE=true; shift ;;
@@ -195,6 +197,9 @@ new_config() {
       --extra-off)
         [[ " ${EXTRAS[*]} " == *" ${2-} "* ]] || die "unknown extra '${2-}'; extras are ${EXTRAS[*]}"
         OFF="$OFF${2} "; shift 2 ;;
+      --extra-on)
+        [[ " ${EXTRAS[*]} " == *" ${2-} "* ]] || die "unknown extra '${2-}'; extras are ${EXTRAS[*]}"
+        OFF="${OFF// ${2} / }"; shift 2 ;;
       *) die "unknown option $1" ;;
     esac
   done
@@ -223,7 +228,7 @@ new_config() {
   esac
 
   if [ -n "$TEMPLATE" ]; then
-    for f in ${TEMPLATE_FILES:-flake.nix machine.nix}; do
+    for f in ${TEMPLATE_FILES-}; do
       [ -e "$DIR/$f" ] || cp "$TEMPLATE/$f" "$DIR/$f"
     done
   fi

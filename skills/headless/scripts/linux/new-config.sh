@@ -7,13 +7,10 @@
 #          [--tailscale] [--tailscale-key-ref REF] [--tailscale-login-server URL]
 #          [--extra-off NAME]... [--keep-password-ssh]
 #
-# DIR becomes a git folder holding settings.json (the headless settings,
-# the same for NixOS and for the distro-neutral script) and headless.env
-# (how to reach the machine and where the password lives; no secret). The
-# NixOS files (flake.nix, machine.nix, system.nix) arrive later, from
-# apply.sh on a NixOS machine or install-nixos.sh; an existing DIR keeps
-# them. settings.json and headless.env are written again from the options
-# given.
+# DIR becomes a git folder holding settings.json (the headless settings
+# the distro-neutral script applies) and headless.env (how to reach the
+# machine and where the password lives; no secret). settings.json and
+# headless.env are written again from the options given.
 #
 # Extras, both on unless named with --extra-off: neverSleep, autoUpdates.
 # shellcheck source=skills/headless/scripts/linux/lib.sh

@@ -1,5 +1,6 @@
 #!/bin/bash
-# tailscale.sh - join the Mac's Tailscale daemon to your tailnet. Turn it on
+# tailscale.sh - join the Mac's Tailscale daemon (the open-source one from
+# Homebrew) to your tailnet. Turn it on
 # first: "tailscale": { "enable": true } in settings.json, then apply.sh.
 #
 # usage: tailscale.sh DIR          join, with the auth key when headless.env
@@ -13,11 +14,11 @@
 # shellcheck source=skills/headless/scripts/mac/lib.sh
 . "$(dirname "$0")/lib.sh"
 load_config "${1-}"
-TS=/run/current-system/sw/bin/tailscale
+TS=/opt/homebrew/bin/tailscale
 ts_check() {
   on 'test ! -d /Applications/Tailscale.app' || die "the Tailscale app is already on $ADDRESS; leave it as it is and keep \"tailscale\" off in settings.json"
-  on 'plutil -extract tailscale raw /etc/headless/settings.json' 2> /dev/null | grep -qx true \
-    || die "Tailscale is off in the Mac's system; set \"tailscale\": { \"enable\": true } in settings.json and run apply.sh"
+  on 'plutil -extract tailscale.enable raw /etc/headless/settings.json' 2> /dev/null | grep -qx true \
+    || die "Tailscale is off in the Mac's settings; set \"tailscale\": { \"enable\": true } in settings.json and run apply.sh"
 }
 ts_host() { on 'h="$(plutil -extract hostName raw /etc/headless/settings.json 2> /dev/null)"; [ -n "$h" ] || h="$(scutil --get LocalHostName)"; printf "%s" "$h"'; }
 tailscale_join "$@"

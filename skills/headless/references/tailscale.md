@@ -3,9 +3,11 @@
 Offer Tailscale; never require it. It lets the user reach the machine from
 anywhere without opening ports.
 
-- It runs as the open-source `tailscaled` daemon, started by the Mac's
-  nix-darwin system (`"tailscale": { "enable": true }` in `settings.json`),
-  with no app and no menu bar item. It starts by itself at every start-up.
+- On a Mac it runs as the open-source `tailscaled` daemon from Homebrew,
+  installed by `apply.sh` as a launchd system daemon
+  (`"tailscale": { "enable": true }` in `settings.json`), with no app and no
+  menu bar item. It starts by itself at every start-up, before anyone signs
+  in.
 - If the Mac already runs the **Tailscale app**, leave it alone: keep
   `tailscale` off. Two Tailscale clients on one Mac fight over the network.
   `apply.sh` and `tailscale.sh` refuse to turn it on when they find
@@ -30,8 +32,7 @@ The Mac joins with its host name. `verify.sh` then checks it is connected.
 ## On Linux
 
 The same settings and the same two ways to join, with
-`scripts/linux/tailscale.sh`. On NixOS the module runs `tailscaled`; on
-Debian, Ubuntu and Fedora `apply.sh` installs Tailscale from Tailscale's own
+`scripts/linux/tailscale.sh`. On Debian, Ubuntu and Fedora `apply.sh` installs Tailscale from Tailscale's own
 signed package repository and starts it. An existing Tailscale install is
 kept as it is.
 

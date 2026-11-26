@@ -1,112 +1,123 @@
 # Mac details
 
+The Mac is set up natively: macOS's own tools (`pmset`, `scutil`,
+`defaults`, an sshd drop-in) for the settings, and Homebrew for software.
+There is no Nix. Every step is a plain script that changes only what
+differs, so running it again changes nothing.
+
 ## Before the skill starts (at the Mac)
 
-- **Apple silicon, a current macOS** (tested on macOS 26). Intel Macs are
-  not supported.
+- **Apple silicon, a current macOS** (Homebrew needs macOS 15 or later).
+  Intel Macs are not supported.
 - **An administrator account with a password.** The skill signs in as this
-  account, and it is the account that signs in by itself at start-up.
+  account, Homebrew belongs to it, and with automatic sign-in on it is the
+  account that signs in by itself at start-up.
 - **Remote Login on**: System Settings > General > Sharing > Remote Login.
   "Allow access for" must include the account.
-- **FileVault** may be on. With FileVault on, macOS waits at its unlock
-  screen after every start-up and nobody is there to type the password;
-  automatic sign-in cannot get past it. So with automatic sign-in chosen,
-  the admin step turns FileVault off itself (below). The user can instead
-  keep FileVault on and set `"autoLogin": false`; after a restart the Mac
-  then waits at FileVault's unlock screen, where SSH answers but signs in
-  only with the password (key sign-in is refused) until it is unlocked.
+- **FileVault** may stay on, and on a laptop it should. The default is
+  automatic sign-in **off**, so FileVault stays on; after each restart
+  someone unlocks it at the Mac (types the account's password) before key
+  sign-in works. Until then SSH answers but signs in only with the
+  password. With automatic sign-in chosen (a Mac that stays plugged in
+  somewhere nobody sits), the admin step turns FileVault off itself
+  (below).
 - **Its address**: shown under System Settings > General > Sharing, such as
-  `mac-mini.local`, or an IP address from the router.
+  `macbook-air.local`, or an IP address from the router. A Tailscale address
+  works too if the Tailscale app is already on the Mac.
 
-## What the headless module sets
+## settings.json
 
-The config folder's `settings.json` holds the module's options
-(`modules/darwin/headless.nix` in this repository):
+`new-config.sh` writes it; edit it and run `apply.sh` again.
 
-| Option | Default | What it does |
+| Setting | Default | What it does |
 | --- | --- | --- |
-| `user` | (required) | The admin account; nix-darwin's primary user. Begin with a lowercase letter, digit or underscore (so a digit is valid); remaining characters may also be dashes. |
-| `hostName` | `null` | Computer, local and host name; `null` keeps the current one. |
-| `sshKeys` | your key | Public keys that may sign in, besides `~/.ssh/authorized_keys`. |
+| `user` | (required) | The admin account. Begin with a lowercase letter, digit or underscore; remaining characters may also be dashes. |
+| `hostName` | `null` | Computer, local (Bonjour) and host name; `null` keeps the current one. |
+| `sshKeys` | your key | Public keys added to the account's `~/.ssh/authorized_keys`. |
 | `keyOnlySsh` | `true` | SSH password, keyboard-interactive and root sign-in off. |
-| `autoLogin` | `true` | Sign the account in on the screen at every start; `false` removes the stored password. |
-| `tailscale.enable` | `false` | Run the open-source Tailscale daemon. |
-| `extras.neverSleep` | `true` | The Mac and its disks never sleep; the display sleeps after 10 minutes. |
-| `extras.startAfterPowerLoss` | `true` | Start up by itself when power comes back after a power cut. |
-| `extras.wakeOnLan` | `true` | Wake for network access. |
-| `extras.powerNapOff` | `true` | Power Nap off. |
-| `extras.spotlightOff` | `true` | Spotlight indexing off on every volume. |
-| `extras.siriOff` | `true` | Siri off for the account. |
+| `autoLogin` | `false` | Sign the account in on the screen at every start; needs FileVault off. `false` removes a stored password. |
+| `tailscale.enable` | `false` | Run the open-source Tailscale daemon from Homebrew. Leave it off when the Tailscale app is installed. |
+| `extras.homebrew` | `true` | Install Apple's Command Line Tools and Homebrew, then the `Brewfile`. |
+| `extras.brewAutoUpgrade` | `true` | A launchd job, run as the account, does `brew update`, `brew upgrade` and `brew cleanup` every Sunday at 03:00 (at the next wake if the Mac slept through it); log in `~/Library/Logs/headless-brew-upkeep.log`. Needs `homebrew`. |
+| `extras.neverSleepOnPower` | `true` | On the power adapter the Mac and its disks never sleep (the display sleeps after 10 minutes if it was set to never). On battery macOS's own settings stay. |
+| `extras.wakeOnLan` | `true` | Wake for network access on the power adapter. |
+| `extras.powerNapOff` | `true` | Power Nap off on battery and adapter. |
+| `extras.startAfterPowerLoss` | `false` | Start up by itself after a power cut (desktop Macs; laptops have no such setting). |
+| `extras.spotlightOff` | `false` | Spotlight indexing off on every volume. |
+| `extras.siriOff` | `false` | Siri off for the account. |
 
-Always on: Nix is left to Determinate Nix; nix-darwin's `/Applications/Nix
-Apps` step is dropped (it needs a permission nobody can grant over SSH);
-SSH ends sessions whose other end is gone after about three minutes; and
-`/etc/headless/settings.json` records what the Mac should be, for
-`verify.sh`.
+`new-config.sh --extra-on NAME` turns on an extra that starts off;
+`--extra-off NAME` turns one off; `--auto-login` turns automatic sign-in on.
 
-Turning an extra off later stops the module managing it; it does not put
-the macOS default back. The Mac keeps the value the extra set (Spotlight
-stays off, the Mac still never sleeps, and so on) until the user changes it
-at the Mac or sets it in `machine.nix`. Automatic sign-in is the exception:
-`false` removes the stored password.
+A MacBook with its lid closed and no external display sleeps no matter
+what `pmset` says; `neverSleepOnPower` keeps it awake with the lid open (or
+closed with a display attached). `verify.sh` says so in an `info` line.
 
-Some Macs, virtual Macs among them, have no start-up-after-power-loss or
-wake-for-network setting. The module skips those with a warning, and
-`verify.sh` reports them as `n/a`.
+Turning an extra off later stops the skill managing it; it does not put
+the macOS default back (Spotlight stays off, and so on) until the user
+changes it at the Mac or in `machine.sh`. Automatic sign-in is the
+exception: `false` removes the stored password.
 
-After a restart with automatic sign-in, macOS may show a dialog asking for
-a password to unlock the disk "Nix Store", even though Determinate Nix has
-already mounted `/nix` and Nix works. This is how macOS and Determinate
-Nix behave together, not a failure; nothing waits on the dialog, and
-Cancel closes it.
+## Brewfile and machine.sh
 
-Add anything else (packages, more defaults, launchd services) to
-`machine.nix` as ordinary nix-darwin options.
+- `Brewfile`: what Homebrew keeps on the Mac. `apply.sh` runs `brew bundle
+  install --no-upgrade` as the account, so anything listed and missing is
+  installed; nothing is removed. Upgrades come from the weekly
+  `brewAutoUpgrade` job, or `brew upgrade` on the Mac any time. Casks that
+  update themselves (`auto_updates`) are left to their own updater. Casks
+  whose installers need sudo fail over SSH and in the weekly job (sudo has
+  no terminal there); install and upgrade those at the Mac.
+- `machine.sh`: your own additions, run as the account (not root) after
+  `brew bundle` on every apply, with Homebrew on `PATH`. Keep it safe to
+  run again.
 
-## How the admin step turns FileVault off
+## The admin step (`admin.sh`)
 
-With automatic sign-in chosen and FileVault on, `admin.sh`, after installing
-Nix, runs, as root, `fdesetup disable -inputplist` with the account name and
-password in a plist on standard input (never a command line). In order:
+As root, with the password from the store for `sudo -S`:
+
+1. **Command Line Tools** (when `homebrew` is on and they are missing),
+   through Software Update, as Homebrew's own installer does. It takes
+   several minutes.
+2. **Homebrew**, from its signed `.pkg` (pinned version and SHA-256 in
+   `scripts/mac/remote/admin.sh`), made to belong to the account through
+   `/var/tmp/.homebrew_pkg_user.plist`. An existing Homebrew is kept; if
+   `/opt/homebrew` belongs to another account the step stops and says so.
+3. **Automatic sign-in** (only when `autoLogin` is true): FileVault off, then
+   the password stored as `/etc/kcpassword` (root-only, and recoverable by
+   anyone with root on the Mac; say so).
+
+### How it turns FileVault off
+
+With automatic sign-in chosen and FileVault on, `admin.sh` runs, as root,
+`fdesetup disable -inputplist` with the account name and password in a
+plist on standard input (never a command line). In order:
 
 1. While FileVault is still encrypting, it waits: macOS refuses to turn it
    off before then.
-2. If the account is not one `fdesetup list` names (it has no secure token,
-   macOS's mark that its password can unlock the disk), it asks the user.
-   The account made when the Mac was set up has one; an admin made from the
-   command line may not.
-3. It turns FileVault off, then reads `fdesetup status`: `fdesetup` exits 0
-   on most refusals. Anything but "Decryption in progress" or "FileVault is
-   Off" asks the user with macOS's message; a managed Mac whose organization
-   forbids turning FileVault off ("due to managed preferences") asks too. A
-   managed Mac that allows it is treated like any Mac.
-4. It waits until decryption ends and FileVault reports off. A restart
-   before then stops at FileVault's unlock screen. On virtual Macs,
-   decrypting took from 1.5 to 10 minutes; on Apple silicon hardware the
-   disk stays hardware-encrypted, so it should be quicker.
+2. If the account is not one `fdesetup list` names (it has no secure token),
+   it asks the user.
+3. It turns FileVault off, then reads `fdesetup status`. Anything but
+   "Decryption in progress" or "FileVault is Off" asks the user with
+   macOS's message; a managed Mac whose organization forbids it asks too.
+4. It waits until decryption ends. A restart before then stops at
+   FileVault's unlock screen.
 
 Every "ask the user" line names what the user can do: turn FileVault off at
 the Mac, or set `"autoLogin": false`. Running `admin.sh` again picks up
-where it stopped, including a decryption already under way. Turning off
-this way is not in `fdesetup`'s manual (it documents `-inputplist` for
-turning on), so a later macOS could change it; the ask is the fallback.
-Nix goes in first because, right after FileVault decrypted, macOS could not
-mount the Nix store's new encrypted volume until a restart.
-An organization's device management can turn FileVault back on later;
-`verify.sh` then reports it.
+where it stopped.
 
 ## Where things go on the Mac
 
-- `~/.headless/config`: the copy of the config folder each apply builds.
+- `~/.headless/config`: the copy of the config folder each apply uses.
 - `~/.headless/remote`: the step scripts each step copies over.
-- `/etc/kcpassword`: the automatic sign-in password, root-only, as macOS
-  keeps it. The admin step writes it from standard input, never a command
-  line (`sysadminctl -autologin` would take it on its command line).
+- `/etc/headless/settings.json`: what the Mac should be, for `verify.sh`.
 - `/etc/ssh/sshd_config.d/000-headless.conf`: the key-only lines. sshd takes
   the first value it reads, so it is named to come before macOS's own
   `100-macos.conf`.
-- `/etc/*.before-nix-darwin`: shell files the Nix installer had edited,
-  moved aside before the first switch so nix-darwin can own them.
+- `/opt/homebrew`: Homebrew, owned by the account.
+- `/Library/LaunchDaemons/com.headless.brew-upkeep.plist`: the weekly
+  Homebrew upkeep job (runs as the account, not root).
+- `/etc/kcpassword`: the automatic sign-in password, only when it is on.
 
 ## Common failures
 
@@ -116,15 +127,18 @@ An organization's device management can turn FileVault back on later;
 | `shows a different host key than the one pinned` | The Mac was reinstalled, or something else answers at that address. Find out which before deleting `known_hosts`. |
 | `password sign-in ... failed` | Wrong password in the store, or the account is not allowed under Remote Login. |
 | `is not an administrator` | Use an admin account, or make this one an admin at the Mac. |
-| `ask the user: ... FileVault ...` | The admin step could not turn FileVault off; the line says why. The user turns it off at the Mac, or sets `"autoLogin": false`. |
-| `FAIL  FileVault off` | FileVault came back on (often the organization managing the Mac); run `admin.sh` again. |
-| `the system did not build` | An error in `machine.nix` or `settings.json`; the Nix error above names the line. |
-| `did not come back within ... seconds` | The Mac did not answer after the restart. Check it at its screen; with FileVault on it waits at its unlock screen for the password. |
+| `Software Update offers no Command Line Tools` | Install them at the Mac with `xcode-select --install`, then run `admin.sh` again. |
+| `/opt/homebrew belongs to ...` | Another account installed Homebrew. Use that account, or hand it over at the Mac. |
+| `brew bundle did not install everything` | A formula or cask failed; its output says which. Casks that need sudo go in at the Mac. |
+| `ask the user: ... FileVault ...` | The admin step could not turn FileVault off; the line says why. |
+| `did not come back within ... seconds` | After a restart with FileVault on, the Mac waits at its unlock screen; unlock it at the Mac and run `verify.sh`. |
 | `is not signed in on the screen after the restart` | Automatic sign-in did not work: FileVault on, or the password changed since `admin.sh` stored it (run it again). |
 
 ## Removing it
 
-`sudo /run/current-system/sw/bin/darwin-uninstaller` removes nix-darwin;
-Determinate Nix has `/nix/nix-installer uninstall`. Move the
-`.before-nix-darwin` files back, delete
-`/etc/ssh/sshd_config.d/000-headless.conf`, and remove `/etc/kcpassword`.
+Delete `/etc/ssh/sshd_config.d/000-headless.conf` (password sign-in comes
+back), `/etc/headless` and `~/.headless`, and `/etc/kcpassword` if present.
+Stop the upkeep job with `sudo launchctl bootout
+system/com.headless.brew-upkeep` and delete its plist.
+Power settings stay as set; `sudo pmset -c sleep 1` and the like change
+them back. Homebrew stays; its own uninstaller removes it.

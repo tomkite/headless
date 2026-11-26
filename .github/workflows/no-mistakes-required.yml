@@ -25,6 +25,9 @@ concurrency:
 jobs:
   check:
     name: PR must be raised via no-mistakes
+    # The gate is the original repository's policy; forks (which do not
+    # require this check) skip it.
+    if: github.repository == 'kunchenguid/headless'
     runs-on: ubuntu-latest
     steps:
       # The enforcement itself now lives in the shared composite action in the

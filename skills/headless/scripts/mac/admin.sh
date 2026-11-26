@@ -1,8 +1,9 @@
 #!/bin/bash
-# admin.sh - the admin session: installs Determinate Nix and, when
-# settings.json turns automatic sign-in on, turns FileVault off if it is on
-# (asking the user only when macOS refuses) and stores the sign-in password
-# macOS uses at start-up. The password goes from the store to sudo -S on
+# admin.sh - the admin session: installs Apple's Command Line Tools and
+# Homebrew (when the homebrew extra is on) and, when settings.json turns
+# automatic sign-in on, turns FileVault off if it is on (asking the user
+# only when macOS refuses) and stores the sign-in password macOS uses at
+# start-up. The password goes from the store to sudo -S on
 # the machine; it never reaches a command line, a log or this output.
 #
 # usage: admin.sh DIR

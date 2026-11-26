@@ -1,0 +1,25 @@
+# Brewfile - the software Homebrew keeps on this Mac. apply.sh runs
+# `brew bundle install --no-upgrade` with it as the Mac's account: anything
+# listed and missing is installed; nothing is removed. With the
+# brewAutoUpgrade extra on (the default), a weekly job (Sunday 03:00)
+# updates, upgrades and cleans up everything Homebrew installed.
+#
+# Add a formula with `brew "name"`, an app with `cask "name"`, and an App
+# Store app with `mas "Name", id: 123456` (sign in to the App Store at the
+# Mac first). Search with `brew search NAME`.
+
+# Command-line tools
+brew "git"
+brew "gh"
+brew "jq"
+brew "ripgrep"
+brew "fzf"
+brew "wget"
+brew "tmux"
+brew "tree"
+brew "less"
+brew "glow"
+brew "mas"
+
+# Apps
+cask "wezterm"
