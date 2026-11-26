@@ -93,9 +93,13 @@ Ask these choices, with the defaults in **bold**:
   Offer `--auto-login` for a Mac that stays plugged in where nobody sits;
   say so: it turns FileVault off (step 5), and the Mac's disk is then no
   longer protected by the account's password.
-- Tailscale: **off**. Offer it; never require it (step 6). If the Mac already
-  has the Tailscale app (`/Applications/Tailscale.app`), keep this off and
-  leave the app as it is; `apply.sh` refuses to start a second Tailscale.
+- Tailscale: **off**. Offer it; never require it (step 6). Two kinds, at
+  most one: `--tailscale` (the open-source daemon from Homebrew, joined by
+  `tailscale.sh`) or `--tailscale-app` (Tailscale's own app, managed: installed
+  if missing, kept running, checked by `verify.sh`; it updates itself and is
+  signed in from the app at the Mac). If the Mac already has the Tailscale
+  app (`/Applications/Tailscale.app`), offer `--tailscale-app`; `apply.sh`
+  refuses to start the daemon beside it.
 - Extras **on** (turn off with `--extra-off`): `homebrew` (Homebrew and the
   `Brewfile`), `brewAutoUpgrade` (weekly update, upgrade and cleanup),
   `neverSleepOnPower`, `wakeOnLan`, `powerNapOff`. Extras

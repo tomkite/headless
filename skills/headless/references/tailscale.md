@@ -8,9 +8,15 @@ anywhere without opening ports.
   (`"tailscale": { "enable": true }` in `settings.json`), with no app and no
   menu bar item. It starts by itself at every start-up, before anyone signs
   in.
-- If the Mac already runs the **Tailscale app**, leave it alone: keep
-  `tailscale` off. Two Tailscale clients on one Mac fight over the network.
-  `apply.sh` and `tailscale.sh` refuse to turn it on when they find
+- Or the skill manages Tailscale's **own app** (`"tailscale": { "app": true }`,
+  `new-config.sh --tailscale-app`): `apply.sh` installs it from Tailscale's
+  signed, notarized package when missing and starts it when the account is
+  signed in at the screen; `verify.sh` checks it runs and is connected. It
+  updates itself, and signing in happens in the app at the Mac, so
+  `tailscale.sh` is not used with it.
+- Never both: with the **Tailscale app** on the Mac, keep `enable` off. Two
+  Tailscale clients on one Mac fight over the network; `apply.sh` and
+  `tailscale.sh` refuse to turn the daemon on when they find
   `/Applications/Tailscale.app`.
 
 ## Joining

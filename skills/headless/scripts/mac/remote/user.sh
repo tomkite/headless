@@ -65,6 +65,17 @@ if flag extras.homebrew true; then
   fi
 fi
 
+# --- Tailscale's own app: running whenever this account is signed in at the
+# screen (the root part installs it). ---
+TS_APP=/Applications/Tailscale.app
+if flag tailscale.app false && [ -d "$TS_APP" ] && ! pgrep -qf "$TS_APP/Contents/MacOS/Tailscale"; then
+  if [ "$(stat -f %Su /dev/console 2> /dev/null)" = "$(id -un)" ]; then
+    open -g -a "$TS_APP" && changed "Tailscale app started"
+  else
+    say "the Tailscale app is not running; it starts when $(id -un) signs in at the screen"
+  fi
+fi
+
 # --- Your own additions. ---
 if [ -f "$C/machine.sh" ]; then
   say "running machine.sh"
